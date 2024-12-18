@@ -1,6 +1,8 @@
 import subprocess
 from datetime import datetime
 
+
+
 def run_command(command):
     """
     시스템 명령어를 실행하는 함수.

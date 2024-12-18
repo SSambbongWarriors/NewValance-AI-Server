@@ -246,7 +246,7 @@ def fullCrawl():
 
     print("content:", news_list)
 
-    return content
+    return content[0]
 
 if __name__=="__main__":
   install_packages()

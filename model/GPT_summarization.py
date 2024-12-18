@@ -6,145 +6,123 @@ import subprocess
 from openai import OpenAI
 
 
+# openai key를 위한 디렉토리 경로 설정
+current_dir = os.path.dirname(os.path.abspath("/home/elicer/capstone_1216/model/GPT_summarization.py"))
+key_dir = os.path.join(current_dir, "../key")
 
-# def install():
-#     package = "openai"
+# key 디렉토리를 Python 경로에 추가
+sys.path.append(key_dir)
 
-#     subprocess.check_call([sys.executable, "pip", "install", package])
+# get_key 함수 import
+from key_manager import get_key
 
-def GPT(total_news):
 
-
-# Set your OpenAI API key
-
-    OPENAI_API_KEY = ("")
-
+def GPT(article):
+    # Set your OpenAI API key
+    OPENAI_API_KEY = get_OPENAI_key()
     client = OpenAI(
-        api_key = OPENAI_API_KEY
+        api_key=OPENAI_API_KEY
     )
 
     summerize_formal = ""
     summerize_casual = ""
-    summerize_TTV = []
+    summerize_TTV = ""
 
     # Define the system role and model
     model = 'gpt-4o'
-    system_role = ("당신은 뉴스 전문가로, 기사를 요약하여 요청받은 말투로 두 개의 대본을 생성한다.\n"
-                    "응답은 두 개의 문자열 리스트를 담은 하나의 파이썬 리스트 형식이어야 한다.")
-
-    # Sample article and query
-    
-
-    # Prepare the prompt
-    query = total_news[0] + " 다음 기사를 한 문장 당 약 60자 정도 되는 다섯 개의 문장으로 요약해서 두 개의 문자열 배열로 리턴해줘. 첫번째 배열은 아나운서처럼 -입니다 체의 말투고 두 번째 배열은 친근하고 장난스러운 말투여야 해. 그리고 두 개의 내용은 동일하되 말투만 달라야 해."
-
-    # Define the messages
-    messages = [
-        {"role": "system", "content": system_role},
-        {"role": "user", "content": query}
-    ]
-
-    # Make the request to the OpenAI API
-    response = client.chat.completions.create(
-        model=model,
-        messages=messages,
+    system_role_clean = (
+        "당신은 데이터를 정제하는 일을 수행합니다.\n"
+        "입력으로 들어오는 데이터는 뉴스 기사를 크롤링한 문자열 배열 데이터입니다.\n"
+        "배열에 포함된 문자열 중 뉴스 내용과 관련없는 출처나 저작권 정보, 기자 정보와 같은 내용을 포함한 문자열은 삭제해야 합니다.\n"
+        "문자열의 내용을 수정해서는 안되며 삭제만 가능합니다.\n"
+        "결과는 하나의 문자열로 리턴합니다."
     )
 
-    # Print the response
-    answer = response.choices[0].message.content
-    print(answer)
+    # Prepare the prompt
+    query_clean = str(article)
 
-    # 파이썬 코드 블록 제거
+    # Define the messages
+    messages_clean = [
+        {"role": "system", "content": system_role_clean},
+        {"role": "user", "content": query_clean}
+    ]
+
+    response_clean = client.chat.completions.create(
+        model=model,
+        messages=messages_clean,
+    )
+
+    answer_clean = response_clean.choices[0].message.content
+
+    # 뉴스 요약 텍스트 생성
+    system_role_summerize = (
+        "당신은 뉴스 전문가로, 기사를 한 문장 당 약 60자 정도 되는 다섯 개의 문장으로 요약한다.\n"
+        "첫 번째 문자열 리스트는 아나운서처럼 -입니다 체의 말투로 요약된 다섯 개의 문장이다.\n"
+        "두 번째 문자열 리스트는 친근하고 장난스러운 말투로 요약된 다섯 개의 문장이다.\n"
+    )
+
+    query_summerize = str(answer_clean)
+
+    messages_summerize = [
+        {"role": "system", "content": system_role_summerize},
+        {"role": "user", "content": query_summerize}
+    ]
+
+    response_summerize = client.chat.completions.create(
+        model=model,
+        messages=messages_summerize,
+    )
+
+    answer = response_summerize.choices[0].message.content
+
     cleaned_response = re.sub(r'```python\n|\n```', '', answer)
 
     try:
         parsed_answer = json.loads(cleaned_response)
+        if isinstance(parsed_answer, list) and len(parsed_answer) == 2:
+            summerize_formal = parsed_answer[0]
+            summerize_casual = parsed_answer[1]
     except json.JSONDecodeError:
         print("JSON 파싱 오류. API 응답:", cleaned_response)
-        parsed_answer = []
 
-    # 파싱된 결과 확인
-    if isinstance(parsed_answer, list) and len(parsed_answer) == 2:
-        summerize_formal = parsed_answer[0]
-        summerize_casual = parsed_answer[1]
-        print("Formal summary:", summerize_formal)
-        print("Casual summary:", summerize_casual)
-    else:
-        print("예상치 못한 응답 형식:", parsed_answer)
-
-    # Define the system role and model
-    system_role_2 = (
-                "You are a content generator for a text-to-video application. Your task is to create dynamic "
-                    "and simple English sentences that describe a scene. Each sentence must:\n"
-                    "- Contain a subject (e.g., a person, an object, or an animal).\n"
-                    "- If the subject is a human, specify whether it is 'a man' or 'a woman.'\n"
-                    "- Optionally describe the clothing they are wearing (e.g., 'a man in a blue shirt').\n"
-                    "- Include a verb that describes an action or movement in simple and common terms.\n"
-                    "- Avoid abstract verbs or phrases like 'say we need,' 'think about,' 'discuss the need,' and replace them with visible actions (e.g., 'write a note,' 'stand in a meeting room').\n"
-                    "- Avoid sentences that cannot be easily visualized in a video (e.g., 'More people say we need an investigation.').\n"
-                    "- Provide a background context where the subject is located (e.g., 'on the street,' 'in the park,' 'at a school').\n"
-                    "Use only common words suitable for beginners or children learning English.\n"
-                    "\nExample sentences:\n"
-                    "- A man runs on the street.\n"
-                    "- A dog jumps in the park.\n"
-                    "- A teacher talks in a classroom."
-                    "\nReturn all generated sentences as a single array of strings, where each sentence is an element of the array.\n"
-                    "\nExample:\n"
-                    "Input: 'The president announced new measures to improve education, including increased funding and teacher training programs.'\n"
-                    "Output: [\"A man in a suit talks in a big hall.\", \"A woman writes notes in a classroom.\", \"Students read books in a library.\"]"
-                )
-
-    # Prepare the prompt
-    query_2 = str(summerize_formal)
-
-    # Define the messages
-    messages_2 = [
-        {"role": "system", "content": system_role_2},
-        {"role": "user", "content": query_2}
-    ]
-
-    # Make the request to the OpenAI API
-    response_2 = client.chat.completions.create(
-        model=model,
-        messages=messages_2,
+    # Define the system role for TTV
+    system_role_TTV = (
+        "You are a content generator for a text-to-video application. Your task is to create dynamic "
+        "and simple English sentences that describe a scene. Each sentence must:\n"
+        "- Contain a clear subject (e.g., a person, an object, or an animal).\n"
+        "- Include a verb that describes an action or movement in simple and common terms.\n"
+        "- Return all generated sentences as a single array of strings.\n"
     )
 
-    # Print the response
-    answer_2 = response_2.choices[0].message.content
-    print(answer_2)
+    query_TTV = str(summerize_formal)
 
-    # 파이썬 코드 블록 제거
-    cleaned_response = re.sub(r'```python\n|\n```', '', answer_2)
+    messages_TTV = [
+        {"role": "system", "content": system_role_TTV},
+        {"role": "user", "content": query_TTV}
+    ]
+
+    response_TTV = client.chat.completions.create(
+        model=model,
+        messages=messages_TTV,
+    )
+
+    answer_TTV = response_TTV.choices[0].message.content
 
     try:
+        cleaned_response = re.sub(r'```python\n|\n```', '', answer_TTV)
         parsed_answer = json.loads(cleaned_response)
+        if isinstance(parsed_answer, list) and len(parsed_answer) == 5:
+            summerize_TTV = parsed_answer
+        else:
+            print("API 응답 형식이 예상과 다릅니다.")
+            summerize_TTV = ["A scene description is unavailable."] * 5
     except json.JSONDecodeError:
         print("JSON 파싱 오류. API 응답:", cleaned_response)
-        parsed_answer = []
+        summerize_TTV = ["A scene description is unavailable."] * 5
 
-    # 파싱된 결과 확인
-    if isinstance(parsed_answer, list) and len(parsed_answer) == 5:
-        summerize_TTV = parsed_answer
-        print("summerize_TTV:", summerize_TTV)
-    else:
-        print("예상치 못한 응답 형식:", parsed_answer)
+    return [summerize_casual, summerize_formal, summerize_TTV]
 
 
-    sum=[summerize_casual, summerize_formal, summerize_TTV]
-
-    return sum
-
-'''
-def fullSummarize(total_news):
-
-    sum=GPT(total_news)
-
-    sum = [summerize_casual, summerize_formal, summerize_TTV]
-
-    return sum
-'''
-
-if __name__=="__main__":
-
-    #install()
-    sum=GPT(total_news)
+if __name__ == "__main__":
+    summaries = GPT(example_article)
+    print("Final Summaries:", summaries)

@@ -2,8 +2,20 @@ import os
 import sys
 import subprocess
 
-API_KEY_STRING=""
-PROJECT_ID=""
+
+# openai key를 위한 디렉토리 경로 설정
+current_dir = os.path.dirname(os.path.abspath("/home/elicer/capstone_1216/model/runTTS.py"))
+key_dir = os.path.join(current_dir, "../key")
+
+# key 디렉토리를 Python 경로에 추가
+sys.path.append(key_dir)
+
+# get_key 함수 import
+from key_manager import get_TTS_key
+
+API_KEY_STRING=get_TTS_key()
+PROJECT_ID="pioneering-coda-442203-r9"
+
 
 '''
 pip install google-cloud-texttospeech sounddevice numpy
