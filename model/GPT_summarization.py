@@ -39,7 +39,7 @@ def GPT(article):
     summerize_TTV = ""
 
     # Define the system role and model
-    model = 'gpt-4o-mini'
+    model = 'gpt-4o'
     system_role_clean = (
         "당신은 데이터를 정제하는 일을 수행합니다.\n"
         "입력으로 들어오는 데이터는 뉴스 기사를 크롤링한 문자열 배열 데이터입니다.\n"
