@@ -11,3 +11,5 @@ venv2/
 *.tar
 *.tar.gz
 *.whl
+*venv*/
+.
